@@ -32,6 +32,9 @@ MANIFEST
 pip-log.txt
 pip-delete-this-directory.txt
 
+.log
+
+metascore_db/
 
 # PyBuilder
 target/
