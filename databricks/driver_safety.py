@@ -1,5 +1,9 @@
 # Databricks notebook source
+## Verify we have the latest packages
+## numpy 1.14.0 is required here. there's a bug with fitting an distribution with older versions of numpy.
 
+import numpy
+numpy.__version__
 
 # COMMAND ----------
 
@@ -121,11 +125,11 @@ for fea in featureNames:
 
 # COMMAND ----------
 
-
+features = eventsPerDriver.toPandas().set_index('DriverId')
 
 # COMMAND ----------
 
-display(eventsPerDriver)
+
 
 # COMMAND ----------
 
@@ -187,13 +191,13 @@ def extract_cummulative_prob_from_dist(x):
         arg = params[:-2]
         loc = params[-2]
         scale = params[-1]
-        print('params = {}, {}, {}.'.format(arg,loc,scale))
+        #print('params = {}, {}, {}.'.format(arg,loc,scale))
         probs[x>0] = st.expon.cdf(xPositive, loc=loc, scale=scale, *arg)
 
     return probs
   
 cdfs = cleanFeatures.apply(extract_cummulative_prob_from_dist).add_suffix("_CDF")
-cdfs.head(10)
+cleanFeatures
 
 # COMMAND ----------
 
@@ -209,8 +213,8 @@ finalDF = spark.createDataFrame(cdfs.reset_index())
 
 # COMMAND ----------
 
-finalDF.head(10)
+display(finalDF)
 
 # COMMAND ----------
 
-finalDF.tail(10)
+display(finalDF)
