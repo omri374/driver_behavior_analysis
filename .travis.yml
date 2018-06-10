@@ -9,5 +9,4 @@ deploy:
   - provider: script
     script: bash databricks/1_deploy/deploy_job.sh -r "westeurope" -t $DATABRICKS_TOKEN -d "/PROD/" -j "my daily job"
     on:
-      tags: true
       all_branches: true
