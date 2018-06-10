@@ -111,6 +111,7 @@ fi
 #####################
 # Ask user to configure databricks cli
 dbi_workspace=$(echo $arm_output | jq -r '.properties.outputs.dbricksWorkspaceName.value')
+pip install --upgrade databricks-cli
 echo -e "${ORANGE}"
 echo "Configure your databricks cli to connect to the newly created Databricks workspace: ${dbi_workspace}. See here for more info: https://bit.ly/2GUwHcw."
 databricks configure --token
