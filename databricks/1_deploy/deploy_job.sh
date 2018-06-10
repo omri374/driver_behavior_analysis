@@ -26,7 +26,11 @@
 set -o errexit
 #set -o pipefail
 set -o nounset
-set -o xtrace
+#set -o xtrace
+
+#set path
+parent_path=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
+cd "$parent_path"
 
 db_region=""
 #db_user=""
