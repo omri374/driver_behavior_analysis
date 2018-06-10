@@ -17,20 +17,22 @@
 # DEALINGS IN THE SOFTWARE.
 #
 #
-# Description: Deploy a notebook 
+# Description:  This script is used to deploy and notebook and schedule it as a job. 
+#               It will delete a pre-existing job with the same name and hence can be used in a CI/CD pipeline.
 #
-# Usage: deploy_job.sh -r "region" -t "token" -j "job conf file" [optional: -p "profile"]
-# Example: deploy_job.sh -r "westeurope" -t "dapi58349058ea5230482058" -j "myjob.json"
+# Usage: deploy_job.sh -j "job conf file" [optional in case databricks isn't preconfigured: -r "region" -t "token"] [optional: -p "profile"]
+# Example: deploy_job.sh -j "myjob.json" [-r "westeurope" -t "dapi58349058ea5230482058"] [-p "myDBWorkspace"]
 
 
 set -o errexit
-#set -o pipefail
+set -o pipefail
 set -o nounset
 #set -o xtrace
 
 #set path
 parent_path=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
 cd "$parent_path"
+echo "working direcoty is: $(pwd)" 
 
 db_region=""
 db_token=""
@@ -38,41 +40,42 @@ db_job_conf=""
 db_cli_profile="DEFAULT"
 
 
-while getopts r:t:j: option
+while getopts r:t:j:p: option
 do
     case "${option}"
     in
         r) db_region=${OPTARG};;
         t) db_token=${OPTARG};;   
         j) db_job_conf=${OPTARG};;   
+        p) db_cli_profile=${OPTARG};;   
     esac
 done
 
-
-if [ -z "$db_region" ]
-then
-    echo "Cluster region wasn't supplied!"
-    exit 1
-fi
-
-if [ -z "$db_token" ]
-then
-    echo "Access token wasn't supplied!"
-    exit 1
-fi
-
-if [ -z "$db_job_conf" ]
-then
+if [ -z "$db_job_conf" ]; then
     echo "Job configuration file wasn't supplied!"
     exit 1
 fi
 
 # configure databricks authentication
-echo "configurating databricks authentication"
-echo "[${db_cli_profile}]" > ~/.databrickscfg
-echo "host = https://${db_region}.azuredatabricks.net" >> ~/.databrickscfg
-echo "token = ${db_token}" >> ~/.databrickscfg
-echo ""  >> ~/.databrickscfg
+db_conf_file=~/.databrickscfg
+if [ ! -f $db_conf_file ]; then
+    # if the conf file doesn't exist we must have some parameters...
+    if [ -z "$db_region" ]; then
+    echo "Cluster region wasn't supplied!"
+    exit 1
+    fi
+
+    if [ -z "$db_token" ]; then
+        echo "Access token wasn't supplied!"
+        exit 1
+    fi
+
+    echo "configurating databricks authentication"
+    echo "[${db_cli_profile}]" >> $db_conf_file
+    echo "host = https://${db_region}.azuredatabricks.net" >> $db_conf_file
+    echo "token = ${db_token}" >> $db_conf_file
+    echo ""  >> $db_conf_file
+fi
 
 # get values from the job config
 db_job_name=$(jq -r '.name' "${db_job_conf}")
@@ -89,7 +92,7 @@ echo "uploading notebooks..."
 databricks --profile "${db_cli_profile}" workspace import "../driver_safety.py" "${job_notebook_path}" --language python --overwrite
 
 # look for our job
-job_id=$(databricks --profile "${db_cli_profile}" jobs list | grep "${db_job_name}" | cut -d" " -f1)
+job_id=$(set +o pipefail && databricks --profile "${db_cli_profile}" jobs list | grep "${db_job_name}" | cut -d" " -f1)
 
 if [ -n "$job_id" ] 
 then
