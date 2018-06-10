@@ -68,6 +68,7 @@ then
 fi
 
 # configure databricks authentication
+echo "configurating databricks authentication"
 echo "[${db_cli_profile}]" > ~/.databrickscfg
 echo "host = https://${db_region}.azuredatabricks.net" >> ~/.databrickscfg
 echo "token = ${db_token}" >> ~/.databrickscfg
@@ -77,7 +78,7 @@ echo ""  >> ~/.databrickscfg
 db_job_name=$(jq -r '.name' "${db_job_conf}")
 job_notebook_path=$(jq -r '.notebook_task.notebook_path' "${db_job_conf}")
 job_notebook_dir=$(jq -r '.notebook_task.notebook_path' "${db_job_conf}" | cut -d"/" -f2)
-
+echo "values extracted from the job conf file: jobName=${db_job_name} notebookPath=${job_notebook_path} notebookFolder=${job_notebook_dir}"
 
 # create the directory for the notebooks in the workspace
 echo "creaing a folder in the workspace"
@@ -86,7 +87,6 @@ databricks --profile "${db_cli_profile}" workspace mkdirs "/${job_notebook_dir}/
 # upload production notebook
 echo "uploading notebooks..."    
 databricks --profile "${db_cli_profile}" workspace import "../driver_safety.py" "${job_notebook_path}" --language python --overwrite
-
 
 # look for our job
 job_id=$(databricks --profile "${db_cli_profile}" jobs list | grep "${db_job_name}" | cut -d" " -f1)
@@ -102,4 +102,3 @@ fi
 # create the job
 echo "creating a new job"    
 databricks --profile "${db_cli_profile}" jobs create --json-file "${db_job_conf}"
-
