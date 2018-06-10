@@ -20,7 +20,7 @@
 # Description:  This script is used to deploy and notebook and schedule it as a job. 
 #               It will delete a pre-existing job with the same name and hence can be used in a CI/CD pipeline.
 #
-# Usage: deploy_job.sh -j "job conf file" [optional in case databricks isn't preconfigured: -r "region" -t "token"] [optional: -p "profile"]
+# Usage: deploy_job.sh -j "job conf file or pattern" [optional in case databricks isn't preconfigured: -r "region" -t "token"] [optional: -p "profile"]
 # Example: deploy_job.sh -j "myjob.json" [-r "westeurope" -t "dapi58349058ea5230482058"] [-p "myDBWorkspace"]
 
 
