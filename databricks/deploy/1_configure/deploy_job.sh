@@ -29,6 +29,40 @@ set -o pipefail
 set -o nounset
 #set -o xtrace
 
+function config_job() {
+    # get values from the job config
+    db_job_name=$(jq -r '.name' "${jobconf}")
+    job_notebook_path=$(jq -r '.notebook_task.notebook_path' "${jobconf}")
+    job_notebook_dir=$(jq -r '.notebook_task.notebook_path' "${jobconf}" | cut -d"/" -f2)
+    job_notebook_name=$(jq -r '.notebook_task.notebook_path' "${jobconf}" | cut -d"/" -f3)
+    echo "     job name: ${db_job_name}"
+    echo "     notebook full path: ${job_notebook_path}"
+    echo "     notebook folder: ${job_notebook_dir}"
+    echo "     notebook name: ${job_notebook_name}"
+
+    # create the directory for the notebooks in the workspace
+    echo "creaing a folder in the workspace"
+    databricks --profile "${db_cli_profile}" workspace mkdirs "/${job_notebook_dir}/"
+
+    # upload notebook
+    echo "uploading notebook"    
+    databricks --profile "${db_cli_profile}" workspace import "../../notebooks/${job_notebook_name}.py" "${job_notebook_path}" --language python --overwrite
+
+    jobs=$(set +o pipefail && databricks --profile "${db_cli_profile}" jobs list | grep "${db_job_name}" | cut -d" " -f1)
+    for job in $jobs
+    do
+        # if the job already exists we should delete it before recreating it.
+        # it's required since we don't know if the job definition has changed or not
+        echo "deleting existing job: $job"    
+        databricks --profile "${db_cli_profile}" jobs delete --job-id "${job}"
+    done
+
+    # create the job
+    echo "creating a new job"    
+    databricks --profile "${db_cli_profile}" jobs create --json-file "${jobconf}"
+}
+
+
 #set path
 parent_path=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
 cd "$parent_path"
@@ -39,7 +73,7 @@ db_token=""
 db_job_conf=""
 db_cli_profile="DEFAULT"
 
-
+# assign command line options to variables
 while getopts r:t:j:p: option
 do
     case "${option}"
@@ -55,6 +89,7 @@ if [ -z "$db_job_conf" ]; then
     echo "Job configuration file wasn't supplied!"
     exit 1
 fi
+
 
 # configure databricks authentication
 db_conf_file=~/.databrickscfg
@@ -77,31 +112,8 @@ if [ ! -f $db_conf_file ]; then
     echo ""  >> $db_conf_file
 fi
 
-# get values from the job config
-db_job_name=$(jq -r '.name' "${db_job_conf}")
-job_notebook_path=$(jq -r '.notebook_task.notebook_path' "${db_job_conf}")
-job_notebook_dir=$(jq -r '.notebook_task.notebook_path' "${db_job_conf}" | cut -d"/" -f2)
-echo "values extracted from the job conf file: jobName=${db_job_name} notebookPath=${job_notebook_path} notebookFolder=${job_notebook_dir}"
 
-# create the directory for the notebooks in the workspace
-echo "creaing a folder in the workspace"
-databricks --profile "${db_cli_profile}" workspace mkdirs "/${job_notebook_dir}/"
-
-# upload production notebook
-echo "uploading notebooks..."    
-databricks --profile "${db_cli_profile}" workspace import "../driver_safety.py" "${job_notebook_path}" --language python --overwrite
-
-# look for our job
-job_id=$(set +o pipefail && databricks --profile "${db_cli_profile}" jobs list | grep "${db_job_name}" | cut -d" " -f1)
-
-if [ -n "$job_id" ] 
-then
-    # if the job already exists we should delete it before recreating it.
-    # it's required since we don't know if the job definition has changed or not
-    echo "deleting existing job"    
-    databricks --profile "${db_cli_profile}" jobs delete --job-id "${job_id}"
-fi
-
-# create the job
-echo "creating a new job"    
-databricks --profile "${db_cli_profile}" jobs create --json-file "${db_job_conf}"
+for jobconf in $db_job_conf; do
+    echo "start process for job config: ${jobconf}"
+    config_job
+done
