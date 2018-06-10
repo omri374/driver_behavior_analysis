@@ -26,7 +26,7 @@
 set -o errexit
 #set -o pipefail
 set -o nounset
-#set -o xtrace
+set -o xtrace
 
 #set path
 parent_path=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
@@ -37,9 +37,10 @@ db_region=""
 db_token=""
 db_cli_profile="DEFAULT"
 
-db_prod_dir=""
-db_job_name="PROD - Driver Safety"
+# db_prod_dir=""
+# db_job_name="PROD - Driver Safety"
 
+db_job_conf="./job.daily.config.json"
 
 while getopts p:d:j:r:t: option
 do
@@ -54,17 +55,17 @@ do
 done
 
 # check required params
-if [ -z "$db_prod_dir" ]
-then
-    echo "Target workspace directory wasn't supplied!"
-    exit 1
-fi
+# if [ -z "$db_prod_dir" ]
+# then
+#     echo "Target workspace directory wasn't supplied!"
+#     exit 1
+# fi
 
-if [ -z "$db_job_name" ]
-then
-    echo "Job name wasn't supplied!"
-    exit 1
-fi
+# if [ -z "$db_job_name" ]
+# then
+#     echo "Job name wasn't supplied!"
+#     exit 1
+# fi
 
 if [ -z "$db_region" ]
 then
@@ -84,13 +85,20 @@ echo "host = https://${db_region}.azuredatabricks.net" >> ~/.databrickscfg
 echo "token = ${db_token}" >> ~/.databrickscfg
 echo ""  >> ~/.databrickscfg
 
+# get names from the job config
+db_job_name=$(jq -r '.name' "${db_job_conf}")
+job_notebook_path=$(jq -r '.notebook_task.notebook_path' "${db_job_conf}")
+job_notebook_dir=$(jq -r '.notebook_task.notebook_path' "${db_job_conf}" | cut -d"/" -f2)
+
+
 # create the directory for the notebooks in the workspace
 echo "creaing a folder in the workspace"
-databricks --profile "${db_cli_profile}" workspace mkdirs "${db_prod_dir}"
+databricks --profile "${db_cli_profile}" workspace mkdirs "/${job_notebook_dir}/"
 
 # upload production notebook
 echo "uploading notebooks..."    
-databricks --profile "${db_cli_profile}" workspace import "../driver_safety.py" "${db_prod_dir}driver_safety" --language python --overwrite
+databricks --profile "${db_cli_profile}" workspace import "../driver_safety.py" "${job_notebook_path}" --language python --overwrite
+
 
 # look for our job
 job_id=$(databricks --profile "${db_cli_profile}" jobs list | grep "${db_job_name}" | cut -d" " -f1)
@@ -105,5 +113,5 @@ fi
 
 # create the job
 echo "creating a new job"    
-databricks --profile "${db_cli_profile}" jobs create --json-file "./job.daily.config.json"
+databricks --profile "${db_cli_profile}" jobs create --json-file "${db_job_conf}"
 
