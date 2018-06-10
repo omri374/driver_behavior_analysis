@@ -19,53 +19,35 @@
 #
 # Description: Deploy a notebook 
 #
-# Usage: deploy_job.sh -r "region" -t "token" -d "dir" -j "job_name" [optional: -p "profile"]
-# Example: deploy_job.sh -r "westeurope" -t "dapi58349058ea5230482058" -d "/PROD/" -j "my daily job"
+# Usage: deploy_job.sh -r "region" -t "token" -j "job conf file" [optional: -p "profile"]
+# Example: deploy_job.sh -r "westeurope" -t "dapi58349058ea5230482058" -j "myjob.json"
 
 
 set -o errexit
 #set -o pipefail
 set -o nounset
-set -o xtrace
+#set -o xtrace
 
 #set path
 parent_path=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
 cd "$parent_path"
 
 db_region=""
-#db_user=""
 db_token=""
+db_job_conf=""
 db_cli_profile="DEFAULT"
 
-# db_prod_dir=""
-# db_job_name="PROD - Driver Safety"
 
-db_job_conf="./job.daily.config.json"
-
-while getopts p:d:j:r:t: option
+while getopts r:t:j: option
 do
     case "${option}"
     in
-        p) db_cli_profile=${OPTARG};;
-        d) db_prod_dir=${OPTARG};;
-        j) db_job_name=${OPTARG};;
         r) db_region=${OPTARG};;
-        t) db_token=${OPTARG};;        
+        t) db_token=${OPTARG};;   
+        j) db_job_conf=${OPTARG};;   
     esac
 done
 
-# check required params
-# if [ -z "$db_prod_dir" ]
-# then
-#     echo "Target workspace directory wasn't supplied!"
-#     exit 1
-# fi
-
-# if [ -z "$db_job_name" ]
-# then
-#     echo "Job name wasn't supplied!"
-#     exit 1
-# fi
 
 if [ -z "$db_region" ]
 then
@@ -79,13 +61,19 @@ then
     exit 1
 fi
 
+if [ -z "$db_job_conf" ]
+then
+    echo "Job configuration file wasn't supplied!"
+    exit 1
+fi
+
 # configure databricks authentication
 echo "[${db_cli_profile}]" > ~/.databrickscfg
 echo "host = https://${db_region}.azuredatabricks.net" >> ~/.databrickscfg
 echo "token = ${db_token}" >> ~/.databrickscfg
 echo ""  >> ~/.databrickscfg
 
-# get names from the job config
+# get values from the job config
 db_job_name=$(jq -r '.name' "${db_job_conf}")
 job_notebook_path=$(jq -r '.notebook_task.notebook_path' "${db_job_conf}")
 job_notebook_dir=$(jq -r '.notebook_task.notebook_path' "${db_job_conf}" | cut -d"/" -f2)
