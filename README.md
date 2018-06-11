@@ -12,11 +12,11 @@ It's best first to go over the python notebook as it contains more details, and 
 ### Requirements
 - For the python notebook:
   - Python > 3.5
-  - **packages**: numpy, scipy, pandas, seaborn, matplotlib
+  - **packages**: numpy (1.14.0 and above), scipy, pandas, seaborn, matplotlib
 
 - For PySpark:
   - Python > 3.5
-  - **packages**: numpy, scipy, pandas, seaborn, matplotlib, pyspark
+  - **packages**: numpy (1.14.0 and above), scipy, pandas, seaborn, matplotlib, pyspark
 
 A code story presenting the entire flow will be uploaded to https://www.microsoft.com/developerblog
 
