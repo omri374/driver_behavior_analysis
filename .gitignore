@@ -34,7 +34,7 @@ pip-delete-this-directory.txt
 
 .log
 
-metascore_db/
+metastore_db/
 
 # PyBuilder
 target/
